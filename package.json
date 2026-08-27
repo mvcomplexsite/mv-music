@@ -1,15 +1,15 @@
 {
   "name": "mv-music",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "MV Music — provider-agnostic music discovery and playback shell using Audius + Jamendo.",
+  "description": "MV Music — Cloudflare Workers music app with Audius + Jamendo provider layer.",
   "scripts": {
-    "start": "node --env-file-if-exists=.env server.mjs",
-    "dev": "node --watch --env-file-if-exists=.env server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node --check src/worker.js && node --check public/app.js"
   },
-  "engines": {
-    "node": ">=20"
+  "devDependencies": {
+    "wrangler": "^4.20.0"
   }
 }

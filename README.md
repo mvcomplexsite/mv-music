@@ -1,87 +1,121 @@
 # MV Music
 
-Первый рабочий прототип MV Music: собственный интерфейс + provider layer для нескольких музыкальных каталогов.
+MV Music — музыкальный веб-сервис с единым интерфейсом и provider-layer для нескольких музыкальных каталогов.
 
-## Что уже есть
+Текущая версия подготовлена специально для бесплатного деплоя на **Cloudflare Workers + Static Assets**.
 
-- тёмный адаптивный UI в музыкальной стилистике MV Music;
+## Что уже работает
+
+- тёмный адаптивный интерфейс MV Music;
 - главная / обзор / поиск;
-- карточки и список треков;
 - постоянный нижний аудиоплеер;
 - play / pause / next / previous / seek / volume / shuffle / repeat;
-- лайки и история прослушиваний (пока `localStorage`);
+- лайки и история прослушиваний (пока в `localStorage` браузера);
 - единый формат трека независимо от источника;
-- Jamendo provider (работает через read API и возвращаемый `audio` stream URL);
-- Audius provider (search / trending / track / stream) после добавления ключей;
-- backend не проксирует весь аудиотрафик: `/api/play/...` редиректит браузер к источнику;
-- Dockerfile для облачного деплоя;
-- никаких npm dependencies — достаточно Node.js 20+.
+- Jamendo provider;
+- Audius provider после добавления API credentials;
+- API и frontend находятся в одном Cloudflare Worker проекте;
+- `/api/play/...` по возможности редиректит браузер к музыкальному CDN, а не проксирует весь аудиофайл через Worker.
 
-## Запуск
+## Структура
 
-```bash
-cp .env.example .env
-npm start
+```text
+mv-music/
+├── public/
+│   ├── index.html
+│   ├── app.js
+│   └── styles.css
+├── src/
+│   └── worker.js
+├── wrangler.jsonc
+├── package.json
+├── .dev.vars.example
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
-Откройте `http://localhost:8787`.
+## Cloudflare deploy через GitHub
 
-Без `.env` приложение тоже запускается. Для Jamendo используется их тестовый read-only `client_id=709fa152`, который предназначен только для быстрых тестов. Перед публичным запуском создайте собственный Jamendo client id.
+Репозиторий и Worker должны называться `mv-music`.
 
-## Подключить Audius
+1. Загрузите содержимое этой папки в корень GitHub-репозитория `mv-music`.
+2. В Cloudflare откройте **Workers & Pages** → **Create application**.
+3. В блоке **Import a repository** нажмите **Get started**.
+4. Подключите GitHub и выберите репозиторий `mv-music`.
+5. Production branch: `main`.
+6. Root directory: `/` (или оставьте пустым, если файлы находятся в корне репозитория).
+7. Build command: оставить пустым.
+8. Deploy command: `npx wrangler deploy`.
+9. Имя Worker: `mv-music`.
+10. Нажмите **Save and Deploy**.
 
-Создайте приложение/API credentials в Audius и заполните:
+После успешного деплоя Cloudflare выдаст адрес вида:
 
-```env
+```text
+https://mv-music.<ваш-workers-subdomain>.workers.dev
+```
+
+Каждый последующий push в `main` будет автоматически запускать новый deploy.
+
+## Переменные Cloudflare
+
+В Worker откройте **Settings → Variables & Secrets**.
+
+Можно начать вообще без Audius: Jamendo использует testing read-only client id для разработки.
+
+Для Audius добавьте:
+
+```text
 AUDIUS_API_KEY=...
 AUDIUS_BEARER_TOKEN=...
 ```
 
-Bearer остаётся только на backend. Не переносите его в `public/app.js`.
+`AUDIUS_BEARER_TOKEN` храните только как secret и никогда не добавляйте в frontend или GitHub.
 
-После рестарта `/api/discover` и `/api/search` начнут агрегировать результаты Audius + Jamendo.
-
-## Архитектура
+Перед публичным запуском добавьте собственный:
 
 ```text
-Browser / MV Player
-        |
-        v
-    MV Music API
-        |
-   Provider layer
-    /        \
- Audius    Jamendo
+JAMENDO_CLIENT_ID=...
 ```
 
-В frontend каждый трек имеет единый вид:
+`MUSIC_PROVIDERS` уже задан в `wrangler.jsonc`:
 
-```json
-{
-  "id": "jamendo:1848357",
-  "provider": "jamendo",
-  "providerId": "1848357",
-  "title": "...",
-  "artist": "...",
-  "artwork": "...",
-  "duration": 272
-}
+```text
+audius,jamendo
 ```
 
-Поэтому будущий `YandexProvider` или партнёрский API добавляется с той же схемой без переписывания плеера и библиотеки.
+## Локальный запуск
 
-## Что делать следующим этапом
+Нужен Node.js 20+.
 
-1. MV Account + PostgreSQL/Supabase для пользователей.
-2. Перенести likes/history/playlists из localStorage в backend.
-3. Страницы артиста и альбома.
-4. Очередь и умный MV Mix.
-5. Кэш поиска/метаданных.
-6. YandexProvider как дополнительная привязка аккаунта.
-7. Админка источников и health monitoring.
+```bash
+npm install
+cp .dev.vars.example .dev.vars
+npm run dev
+```
 
-## Cloud deploy
+Wrangler покажет локальный адрес, обычно `http://localhost:8787`.
 
-Проект слушает `PORT` и подходит для Render/Railway/Fly.io/Cloud Run или любого Docker-хостинга.
+## API
 
-Для production обязательно задайте собственные `JAMENDO_CLIENT_ID`, `AUDIUS_API_KEY` и `AUDIUS_BEARER_TOKEN` через secrets/environment variables платформы.
+```text
+GET /api/health
+GET /api/config
+GET /api/discover
+GET /api/search?q=rock
+GET /api/track/jamendo/:id
+GET /api/track/audius/:id
+GET /api/play/jamendo/:id
+GET /api/play/audius/:id
+```
+
+## Следующие этапы
+
+- MV Account;
+- Cloudflare D1 для аккаунтов, лайков, истории и плейлистов;
+- страницы артиста и альбома;
+- очередь и MV Mix;
+- кэш API;
+- YandexProvider как дополнительное подключение аккаунта;
+- замена провайдера на партнёрский API без переделки frontend.
