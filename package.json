@@ -1,0 +1,15 @@
+{
+  "name": "mv-music",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MV Music — provider-agnostic music discovery and playback shell using Audius + Jamendo.",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "dev": "node --watch --env-file-if-exists=.env server.mjs",
+    "check": "node --check server.mjs && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
