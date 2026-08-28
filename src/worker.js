@@ -1,6 +1,5 @@
 const AUDIUS_BASE = 'https://api.audius.co/v1'
 const JAMENDO_BASE = 'https://api.jamendo.com/v3.0'
-const JAMENDO_TEST_CLIENT_ID = '709fa152'
 
 function json(body, status = 200, cacheSeconds = 0) {
   return new Response(JSON.stringify(body), {
@@ -51,7 +50,7 @@ function audiusBearer(env) {
 }
 
 function jamendoClientId(env) {
-  return safeText(env.JAMENDO_CLIENT_ID, JAMENDO_TEST_CLIENT_ID).trim() || JAMENDO_TEST_CLIENT_ID
+  return safeText(env.JAMENDO_CLIENT_ID).trim()
 }
 
 function normalizeAudius(track) {
@@ -166,8 +165,10 @@ function audiusStreamUrl(env, id) {
 }
 
 function jamendoUrl(path, env, params = {}) {
+  const clientId = jamendoClientId(env)
+  if (!clientId) throw new Error('JAMENDO_CLIENT_ID is not configured')
   const url = new URL(`${JAMENDO_BASE}${path}`)
-  url.searchParams.set('client_id', jamendoClientId(env))
+  url.searchParams.set('client_id', clientId)
   url.searchParams.set('format', 'json')
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
@@ -200,12 +201,21 @@ async function jamendoSearch(env, query, limit = 20) {
 }
 
 async function jamendoTrending(env, limit = 20) {
-  return jamendoTracks(env, {
-    featured: '1',
-    order: 'popularity_week',
-    groupby: 'artist_id',
-    limit
-  })
+  // Do not rely on featured=1 here: Jamendo's editorial selection can
+  // legitimately return an empty result set. Use broad popularity charts
+  // and fall back again if the upstream index is temporarily sparse.
+  const attempts = [
+    { order: 'popularity_week', groupby: 'artist_id', limit },
+    { order: 'popularity_total', groupby: 'artist_id', limit },
+    { order: 'releasedate_desc', limit }
+  ]
+
+  for (const params of attempts) {
+    const tracks = await jamendoTracks(env, params)
+    if (tracks.length) return tracks
+  }
+
+  return []
 }
 
 async function jamendoTrack(env, id) {
@@ -313,19 +323,27 @@ async function jamendoAlbum(env, id) {
 }
 
 async function settleProviders(env, kind, ...args) {
+  const diagnostics = {}
   const calls = providerOrder(env).map(async (provider) => {
     try {
       if (provider === 'audius') {
         const fn = kind === 'search' ? audiusSearch : kind === 'trending' ? audiusTrending : null
-        return fn ? await fn(env, ...args) : []
+        const items = fn ? await fn(env, ...args) : []
+        diagnostics[provider] = { ok: true, count: items.length }
+        return items
       }
       if (provider === 'jamendo') {
         const fn = kind === 'search' ? jamendoSearch : kind === 'trending' ? jamendoTrending : null
-        return fn ? await fn(env, ...args) : []
+        const items = fn ? await fn(env, ...args) : []
+        diagnostics[provider] = { ok: true, count: items.length }
+        return items
       }
+      diagnostics[provider] = { ok: false, count: 0, error: 'Unknown provider' }
       return []
     } catch (error) {
-      console.warn(`[provider:${provider}] ${kind} failed:`, error?.message || error)
+      const message = error?.message || String(error)
+      console.warn(`[provider:${provider}] ${kind} failed:`, message)
+      diagnostics[provider] = { ok: false, count: 0, error: message }
       return []
     }
   })
@@ -339,7 +357,7 @@ async function settleProviders(env, kind, ...args) {
       if (items[index]) interleaved.push(items[index])
     }
   }
-  return interleaved
+  return { tracks: interleaved, diagnostics }
 }
 
 async function handleApi(request, env) {
@@ -348,7 +366,7 @@ async function handleApi(request, env) {
   if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405)
 
   if (url.pathname === '/api/health') {
-    return json({ ok: true, app: 'MV Music', runtime: 'cloudflare-workers', version: '0.3.0' })
+    return json({ ok: true, app: 'MV Music', runtime: 'cloudflare-workers', version: '0.3.1' })
   }
 
   if (url.pathname === '/api/config') {
@@ -364,7 +382,7 @@ async function handleApi(request, env) {
         },
         jamendo: {
           enabled: Boolean(clientId),
-          testingClient: clientId === JAMENDO_TEST_CLIENT_ID
+          configured: Boolean(clientId)
         }
       },
       providerOrder: providerOrder(env)
@@ -372,15 +390,25 @@ async function handleApi(request, env) {
   }
 
   if (url.pathname === '/api/discover') {
-    const tracks = await settleProviders(env, 'trending', 30)
-    return json({ tracks, count: tracks.length }, 200, 180)
+    const result = await settleProviders(env, 'trending', 30)
+    return json({ tracks: result.tracks, count: result.tracks.length, providers: result.diagnostics }, 200)
+  }
+
+  if (url.pathname === '/api/debug/jamendo') {
+    if (!jamendoClientId(env)) return json({ ok: false, error: 'JAMENDO_CLIENT_ID is not configured' }, 503)
+    try {
+      const tracks = await jamendoTracks(env, { order: 'popularity_week', limit: 3 })
+      return json({ ok: true, count: tracks.length, sample: tracks.map(({ providerId, title, artist, streamable }) => ({ providerId, title, artist, streamable })) })
+    } catch (error) {
+      return json({ ok: false, error: error?.message || String(error) }, 502)
+    }
   }
 
   if (url.pathname === '/api/search') {
     const query = (url.searchParams.get('q') || '').trim()
     if (query.length < 2) return json({ error: 'Введите хотя бы 2 символа' }, 400)
-    const tracks = await settleProviders(env, 'search', query, 30)
-    return json({ query, tracks, count: tracks.length }, 200, 90)
+    const result = await settleProviders(env, 'search', query, 30)
+    return json({ query, tracks: result.tracks, count: result.tracks.length, providers: result.diagnostics }, 200)
   }
 
   const trackMatch = url.pathname.match(/^\/api\/track\/(audius|jamendo)\/([^/]+)$/)
