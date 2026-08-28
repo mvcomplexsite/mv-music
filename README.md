@@ -1,121 +1,62 @@
 # MV Music
 
-MV Music — музыкальный веб-сервис с единым интерфейсом и provider-layer для нескольких музыкальных каталогов.
+MV Music — музыкальный веб-сервис на Cloudflare Workers + Static Assets. Каталог подключается через независимый provider layer: сейчас Jamendo работает без дополнительных секретов для тестовой сборки, Audius включается после добавления API credentials.
 
-Текущая версия подготовлена специально для бесплатного деплоя на **Cloudflare Workers + Static Assets**.
+## Что есть в текущей версии
 
-## Что уже работает
+- главная и каталог;
+- поиск треков;
+- постоянный аудиоплеер;
+- очередь, shuffle, repeat, Media Session;
+- страницы трека;
+- страницы Jamendo-исполнителей и альбомов;
+- лайки и история в localStorage;
+- локальные плейлисты: создание, добавление и удаление треков;
+- адаптивный интерфейс;
+- Cloudflare Worker API и Static Assets в одном deploy.
 
-- тёмный адаптивный интерфейс MV Music;
-- главная / обзор / поиск;
-- постоянный нижний аудиоплеер;
-- play / pause / next / previous / seek / volume / shuffle / repeat;
-- лайки и история прослушиваний (пока в `localStorage` браузера);
-- единый формат трека независимо от источника;
-- Jamendo provider;
-- Audius provider после добавления API credentials;
-- API и frontend находятся в одном Cloudflare Worker проекте;
-- `/api/play/...` по возможности редиректит браузер к музыкальному CDN, а не проксирует весь аудиофайл через Worker.
+## Развёртывание
 
-## Структура
+Репозиторий должен называться `mv-music`. Cloudflare Workers Builds может быть подключён к ветке `main`.
 
-```text
-mv-music/
-├── public/
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
-├── src/
-│   └── worker.js
-├── wrangler.jsonc
-├── package.json
-├── .dev.vars.example
-├── .env.example
-├── .gitignore
-└── README.md
-```
-
-## Cloudflare deploy через GitHub
-
-Репозиторий и Worker должны называться `mv-music`.
-
-1. Загрузите содержимое этой папки в корень GitHub-репозитория `mv-music`.
-2. В Cloudflare откройте **Workers & Pages** → **Create application**.
-3. В блоке **Import a repository** нажмите **Get started**.
-4. Подключите GitHub и выберите репозиторий `mv-music`.
-5. Production branch: `main`.
-6. Root directory: `/` (или оставьте пустым, если файлы находятся в корне репозитория).
-7. Build command: оставить пустым.
-8. Deploy command: `npx wrangler deploy`.
-9. Имя Worker: `mv-music`.
-10. Нажмите **Save and Deploy**.
-
-После успешного деплоя Cloudflare выдаст адрес вида:
-
-```text
-https://mv-music.<ваш-workers-subdomain>.workers.dev
-```
-
-Каждый последующий push в `main` будет автоматически запускать новый deploy.
-
-## Переменные Cloudflare
-
-В Worker откройте **Settings → Variables & Secrets**.
-
-Можно начать вообще без Audius: Jamendo использует testing read-only client id для разработки.
-
-Для Audius добавьте:
-
-```text
-AUDIUS_API_KEY=...
-AUDIUS_BEARER_TOKEN=...
-```
-
-`AUDIUS_BEARER_TOKEN` храните только как secret и никогда не добавляйте в frontend или GitHub.
-
-Перед публичным запуском добавьте собственный:
-
-```text
-JAMENDO_CLIENT_ID=...
-```
-
-`MUSIC_PROVIDERS` уже задан в `wrangler.jsonc`:
-
-```text
-audius,jamendo
-```
-
-## Локальный запуск
-
-Нужен Node.js 20+.
+Deploy command:
 
 ```bash
-npm install
-cp .dev.vars.example .dev.vars
-npm run dev
+npx wrangler deploy
 ```
 
-Wrangler покажет локальный адрес, обычно `http://localhost:8787`.
+Build command не требуется.
+
+После каждого commit/push в `main` Cloudflare автоматически пересоберёт Worker.
 
 ## API
 
-```text
-GET /api/health
-GET /api/config
-GET /api/discover
-GET /api/search?q=rock
-GET /api/track/jamendo/:id
-GET /api/track/audius/:id
-GET /api/play/jamendo/:id
-GET /api/play/audius/:id
-```
+- `GET /api/health`
+- `GET /api/config`
+- `GET /api/discover`
+- `GET /api/search?q=rock`
+- `GET /api/track/:provider/:id`
+- `GET /api/artist/:provider/:id`
+- `GET /api/album/:provider/:id`
+- `GET /api/play/:provider/:id`
+
+## Переменные Cloudflare
+
+Необязательно для Jamendo test mode:
+
+- `JAMENDO_CLIENT_ID`
+
+Для Audius:
+
+- `AUDIUS_API_KEY`
+- `AUDIUS_BEARER_TOKEN`
+
+Секреты не добавлять в GitHub.
 
 ## Следующие этапы
 
+- Cloudflare D1;
 - MV Account;
-- Cloudflare D1 для аккаунтов, лайков, истории и плейлистов;
-- страницы артиста и альбома;
-- очередь и MV Mix;
-- кэш API;
-- YandexProvider как дополнительное подключение аккаунта;
-- замена провайдера на партнёрский API без переделки frontend.
+- серверная библиотека, история и плейлисты;
+- Audius;
+- подключаемые внешние аккаунты и партнёрские provider API.

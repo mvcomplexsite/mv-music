@@ -3,25 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#08090c" />
+  <meta name="theme-color" content="#090a0d" />
+  <meta name="description" content="MV Music — музыка из нескольких источников в одном интерфейсе." />
   <title>MV Music</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#" data-view="home" aria-label="MV Music">
+      <a class="brand" href="#home" data-view="home" aria-label="MV Music">
         <span class="brand-mark"><span></span><span></span><span></span></span>
         <span class="brand-name">MV <b>Music</b></span>
       </a>
 
       <nav class="nav-block">
-        <button class="nav-item active" data-view="home">
-          <span class="nav-icon">⌂</span><span>Главная</span>
-        </button>
-        <button class="nav-item" data-view="explore">
-          <span class="nav-icon">⌕</span><span>Обзор</span>
-        </button>
+        <button class="nav-item active" data-view="home"><span class="nav-icon">⌂</span><span>Главная</span></button>
+        <button class="nav-item" data-view="explore"><span class="nav-icon">⌕</span><span>Обзор</span></button>
       </nav>
 
       <div class="nav-label">Моя музыка</div>
@@ -36,19 +33,23 @@
           <span class="status-dot"></span>
           <div><strong>Источники</strong><small id="providerSummary">проверяем…</small></div>
         </div>
-        <button class="profile-button"><span class="avatar">MV</span><span>MV Account</span><span>›</span></button>
+        <button class="profile-button" id="profileButton"><span class="avatar">MV</span><span>MV Account</span><span class="soon-pill">скоро</span></button>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <button class="mobile-menu" id="mobileMenu" aria-label="Меню">☰</button>
+        <div class="history-nav">
+          <button class="top-icon" id="backBtn" title="Назад">‹</button>
+          <button class="top-icon" id="forwardBtn" title="Вперёд">›</button>
+        </div>
         <form class="search" id="searchForm">
           <span class="search-icon">⌕</span>
           <input id="searchInput" type="search" autocomplete="off" placeholder="Треки, исполнители, альбомы" />
           <kbd>Enter</kbd>
         </form>
-        <button class="round-button" title="Уведомления">●</button>
+        <div class="top-provider" id="topProvider"><span class="status-dot"></span><span>MV Music</span></div>
       </header>
 
       <div class="content" id="content">
@@ -56,77 +57,107 @@
           <div class="hero">
             <div class="hero-copy">
               <span class="eyebrow">MV MIX • БЕСКОНЕЧНЫЙ ПОТОК</span>
-              <h1>Музыка под<br><em>твоё настроение</em></h1>
-              <p>Нажимай play — MV Music соберёт поток из доступных источников. Без привязки интерфейса к одному каталогу.</p>
+              <h1>Музыка, которая<br><em>не привязана к одному сервису</em></h1>
+              <p>MV Music собирает доступные каталоги в один плеер. Сейчас играет Jamendo, затем подключим Audius и другие источники.</p>
               <div class="hero-actions">
                 <button class="primary" id="heroPlay">▶ &nbsp; Слушать микс</button>
-                <button class="ghost" data-view="explore">Смотреть всё</button>
+                <button class="ghost" data-view="explore">Открыть каталог</button>
               </div>
             </div>
             <div class="hero-art" aria-hidden="true">
-              <div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div>
-              <div class="disc"><div class="disc-center">MV</div></div>
+              <div class="glow glow-a"></div><div class="glow glow-b"></div>
+              <div class="vinyl"><div class="vinyl-label"><span>MV</span><b>MUSIC</b></div></div>
+              <div class="wave-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </div>
           </div>
 
           <section class="section">
-            <div class="section-head"><div><span class="eyebrow">СЕГОДНЯ ДЛЯ ТЕБЯ</span><h2>Популярное сейчас</h2></div><button class="text-button" data-view="explore">Все треки →</button></div>
+            <div class="section-head"><div><span class="eyebrow">СЕГОДНЯ</span><h2>Популярное сейчас</h2></div><button class="text-button" data-view="explore">Все треки →</button></div>
             <div class="cards" id="featuredCards"><div class="skeleton-grid"></div></div>
           </section>
 
+          <section class="section mood-section">
+            <div class="section-head"><div><span class="eyebrow">БЫСТРЫЙ ПОИСК</span><h2>Под настроение</h2></div></div>
+            <div class="mood-grid">
+              <button class="mood-card orange" data-search="electronic"><span>Electronic</span><small>энергично</small></button>
+              <button class="mood-card purple" data-search="ambient"><span>Ambient</span><small>в фоне</small></button>
+              <button class="mood-card blue" data-search="rock"><span>Rock</span><small>погромче</small></button>
+              <button class="mood-card pink" data-search="lofi"><span>Lo-Fi</span><small>спокойно</small></button>
+            </div>
+          </section>
+
           <section class="section compact-section">
-            <div class="section-head"><div><span class="eyebrow">БЫСТРЫЙ СТАРТ</span><h2>Продолжить слушать</h2></div></div>
+            <div class="section-head"><div><span class="eyebrow">ТВОЯ ИСТОРИЯ</span><h2>Продолжить слушать</h2></div></div>
             <div class="track-list" id="recentHome"></div>
           </section>
         </section>
 
         <section id="exploreView" class="view">
-          <div class="page-title"><span class="eyebrow">КАТАЛОГ MV MUSIC</span><h1>Обзор</h1><p>Треки из подключённых музыкальных источников в одном интерфейсе.</p></div>
+          <div class="page-title"><span class="eyebrow">КАТАЛОГ MV MUSIC</span><h1>Обзор</h1><p>Поиск по подключённым источникам с единым плеером.</p></div>
           <div class="genre-row">
-            <button data-search="electronic">Electronic</button><button data-search="hiphop">Hip-Hop</button><button data-search="rock">Rock</button><button data-search="pop">Pop</button><button data-search="lofi">Lo-Fi</button><button data-search="ambient">Ambient</button>
+            <button data-search="electronic">Electronic</button><button data-search="hip hop">Hip-Hop</button><button data-search="rock">Rock</button><button data-search="pop">Pop</button><button data-search="lofi">Lo-Fi</button><button data-search="ambient">Ambient</button><button data-search="jazz">Jazz</button>
           </div>
           <div class="section-head results-head"><h2 id="exploreTitle">Рекомендации</h2><span id="resultCount"></span></div>
           <div class="track-list large" id="exploreList"></div>
         </section>
 
         <section id="likesView" class="view library-view">
-          <div class="library-hero"><div class="library-icon">♥</div><div><span class="eyebrow">МОЯ МУЗЫКА</span><h1>Мне нравится</h1><p id="likesCount">0 треков</p></div></div>
+          <div class="library-hero"><div class="library-icon">♥</div><div><span class="eyebrow">МОЯ МУЗЫКА</span><h1>Мне нравится</h1><p id="likesCount">0 треков</p></div><button class="primary library-play" id="playLikes">▶ Слушать</button></div>
           <div class="track-list large" id="likesList"></div>
         </section>
 
         <section id="historyView" class="view library-view">
-          <div class="library-hero"><div class="library-icon neutral">↺</div><div><span class="eyebrow">МОЯ МУЗЫКА</span><h1>Недавние</h1><p>Последние прослушивания хранятся локально в MV Music.</p></div></div>
+          <div class="library-hero"><div class="library-icon neutral">↺</div><div><span class="eyebrow">МОЯ МУЗЫКА</span><h1>Недавние</h1><p>Последние прослушивания на этом устройстве.</p></div></div>
           <div class="track-list large" id="historyList"></div>
         </section>
 
         <section id="playlistsView" class="view library-view">
-          <div class="library-hero"><div class="library-icon purple">▤</div><div><span class="eyebrow">МОЯ МУЗЫКА</span><h1>Плейлисты</h1><p>Следующий этап: MV Account + синхронизация с backend.</p></div></div>
-          <div class="empty-state"><div class="empty-art">＋</div><h3>Создай первый плейлист</h3><p>В этой сборке лайки и история уже работают. Серверные плейлисты подключим вместе с авторизацией MV Account.</p><button class="primary" disabled>Создать плейлист — скоро</button></div>
+          <div class="library-hero playlists-hero"><div class="library-icon purple">▤</div><div><span class="eyebrow">МОЯ МУЗЫКА</span><h1>Плейлисты</h1><p>Пока хранятся локально. Позже перенесём их в MV Account.</p></div><button class="primary library-play" id="createPlaylistBtn">＋ Создать</button></div>
+          <div class="playlist-grid" id="playlistCards"></div>
         </section>
+
+        <section id="trackView" class="view detail-view"><div id="trackDetail"></div></section>
+        <section id="artistView" class="view detail-view"><div id="artistDetail"></div></section>
+        <section id="albumView" class="view detail-view"><div id="albumDetail"></div></section>
+        <section id="playlistDetailView" class="view detail-view"><div id="playlistDetail"></div></section>
       </div>
     </main>
+  </div>
+
+  <aside class="queue-drawer" id="queueDrawer" aria-hidden="true">
+    <div class="drawer-head"><div><span class="eyebrow">СЕЙЧАС ИГРАЕТ</span><h2>Очередь</h2></div><button class="close-button" id="queueClose">×</button></div>
+    <div class="queue-list" id="queueList"></div>
+  </aside>
+  <div class="drawer-scrim" id="drawerScrim"></div>
+
+  <div class="modal-backdrop" id="playlistModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><div><span class="eyebrow">MV БИБЛИОТЕКА</span><h3 id="playlistModalTitle">Добавить в плейлист</h3></div><button class="close-button" id="playlistModalClose">×</button></div>
+      <div id="playlistModalBody"></div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
 
   <footer class="player" id="player">
     <div class="player-track">
-      <div class="player-cover" id="playerCover"><span>MV</span></div>
-      <div class="player-meta"><strong id="playerTitle">Выбери трек</strong><span id="playerArtist">MV Music</span></div>
+      <button class="player-cover cover-button" id="playerCover" title="Открыть трек"><span>MV</span></button>
+      <div class="player-meta"><strong id="playerTitle">Выбери трек</strong><button id="playerArtist" class="link-button">MV Music</button></div>
       <button class="icon-button like-button" id="playerLike" title="Мне нравится">♡</button>
     </div>
     <div class="player-center">
       <div class="player-controls">
         <button class="icon-button" id="shuffleBtn" title="Перемешать">⌘</button>
-        <button class="icon-button big-skip" id="prevBtn">‹</button>
-        <button class="play-button" id="playBtn">▶</button>
-        <button class="icon-button big-skip" id="nextBtn">›</button>
+        <button class="icon-button big-skip" id="prevBtn" title="Предыдущий">‹</button>
+        <button class="play-button" id="playBtn" title="Воспроизвести">▶</button>
+        <button class="icon-button big-skip" id="nextBtn" title="Следующий">›</button>
         <button class="icon-button" id="repeatBtn" title="Повтор">↻</button>
       </div>
       <div class="progress-row"><span id="currentTime">0:00</span><input id="progress" type="range" min="0" max="1000" value="0"><span id="duration">0:00</span></div>
     </div>
     <div class="player-actions">
       <span class="provider-badge" id="providerBadge">MV</span>
+      <button class="icon-button queue-button" id="queueBtn" title="Очередь">≡</button>
       <span class="volume-icon">◖</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8">
     </div>
     <audio id="audio" preload="metadata"></audio>
