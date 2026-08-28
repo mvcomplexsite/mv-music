@@ -13,6 +13,7 @@
 
   "vars": {
     "MUSIC_PROVIDERS": "audius,jamendo",
-    "JAMENDO_CLIENT_ID": "279c84a9"
+    "JAMENDO_CLIENT_ID": "279c84a9",
+    "AUDIUS_API_KEY": "0x97597c1727ef22c0a6cc8bf5ebe34d795514ff9f"
   }
 }
